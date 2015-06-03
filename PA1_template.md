@@ -1,47 +1,56 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 
 ## Loading and preprocessing the data
 
-```{r}
+
+```r
 activity <- read.csv("activity.csv")
 activity$date <- as.Date(activity$date)
 ```
 
 ## What is mean total number of steps taken per day?
 
-```{r}
+
+```r
 daily.steps <- tapply(activity$steps,activity$date,sum)
 hist(daily.steps)
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-2-1.png) 
+
+```r
 mean.daily.steps <- mean(daily.steps, na.rm = TRUE)
 median.daily.steps <- median(daily.steps, na.rm = TRUE)
 ```
 
-On average, the study subject took `r format(mean.daily.steps)` steps per day. On the median day, the subject took `r median.daily.steps` steps.
+On average, the study subject took 10766.19 steps per day. On the median day, the subject took 10765 steps.
 
 ## What is the average daily activity pattern?
 
-```{r}
+
+```r
 interval.steps <- tapply(activity$steps,activity$interval,mean, na.rm=TRUE)
 plot(rownames(interval.steps),interval.steps,type="l")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-3-1.png) 
+
+```r
 max.interval.index <- which(interval.steps==max(interval.steps))
 max.interval.name <- rownames(interval.steps)[max.interval.index]
 ```
 
-The daily interval with the greatest average steps was `r max.interval.name`.
+The daily interval with the greatest average steps was 835.
 
 ## Imputing missing values
 
-`r sum(is.na(activity$steps))` intervals are missing data.
+2304 intervals are missing data.
 
 First let's create a quick visualization of daily patterns. This plots a heatmap with days on the y axis and interval on the x axis. White squares represent missing data, red represents intervals with few steps and yellow represents intervals with more steps. 
 
-```{r}
+
+```r
 library(reshape2)
 wide.view <- dcast(activity,interval ~ date, value.var = "steps")
 A = as.matrix(wide.view)
@@ -50,9 +59,12 @@ A = A[,-1]
 image(A)
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-4-1.png) 
+
 We can see that some days are completely missing (the horizontal white bars). This would make it difficult to impute missing data purely based on a daily average. From "eyeballing" it, I would also say that there appears to be more of a relationship between interval and activity rather than day and activity. For simplicity, we will replace missing values with the average value across all days for that interval.
 
-```{r}
+
+```r
 # note, this takes advantage of the fact that the dataframe is sorted by date and interval and that
 # there are no missing intervals even if the data for those intervals is missing
 # since the interval column is just 0-2355 repeated 60 times (60x288 long), R lets us treat a 288
@@ -63,14 +75,20 @@ imputed <- activity
 imputed$steps <- ifelse(is.na(imputed$steps),average,imputed$steps)
 ```
 
-```{r}
+
+```r
 imputed.daily.steps <- tapply(imputed$steps,imputed$date,sum)
 hist(imputed.daily.steps)
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-6-1.png) 
+
+```r
 imputed.mean.daily.steps <- mean(imputed.daily.steps)
 imputed.median.daily.steps <- median(imputed.daily.steps)
 ```
 
-Using our imputed values, the new average number of daily steps taken was **`r format(imputed.mean.daily.steps)`**, which is no different from the original value of **`r format(mean.daily.steps)`**. The imputed median value was **`r format(imputed.median.daily.steps)`** as opposed to **`r median.daily.steps`**.
+Using our imputed values, the new average number of daily steps taken was **10766.19**, which is no different from the original value of **10766.19**. The imputed median value was **10766.19** as opposed to **10765**.
 
 It is not surprising that the mean value saw no change as the original calculation removed missing values from the average value computed. In general, adding the average of a set of values to that set of values will not change the average of the set. While in this case, we intruduced new values that were the average of an aggregation across one dimension, then aggregated and averaged over a different dimension, the fact that this did not change the end result is likely due to a mathematical distributed equality law. This occurence should not be treated as a proof of any equality, but such an equality could be investigated and likely proven.
 
@@ -79,11 +97,8 @@ We would not expect to see similar equality laws for the median score, because t
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
-The panel plot below shows weekday average activity compared to weekend average activity. Note that average weekday activity shows little to no activity early in the day followed by a steep and sudden rise. This compares to weekend activity which likewise starts with little to no activity, but followed by a slow and gradual rise. 
 
-A likely explanation for this difference is that the subject's wake time is governed by an alarm clock on weekdays. This results in a consistent and sudden transition from no activity (sleep) to some activity (waking up and walking around). In contrast, the subject likely sleeps in and wakes up naturally on the weekend. The averaging of this random variable creates a smoother curve. We can also see that in general, the active periods tend to start later on the weekend and even continue later, suggesting that the subject tends to stay up later on average weekend nights than on weekday nights. The difference in evening activity might be better seen if we treated Fridays as weekend evenings, and Sundays as weekday evenings.
-
-```{r}
+```r
 library(reshape2)
 library(ggplot2)
 activity$weekday <- factor(ifelse(weekdays(activity$date) %in% c("Sunday", "Saturday"), "weekend", "weekday"))
@@ -91,3 +106,5 @@ melted <- melt(activity, id.vars=c("date", "interval", "weekday"), measure.vars=
 means <- dcast(data=melted, formula = interval + weekday ~ variable, fun.aggregate=mean, na.rm=TRUE)
 qplot(x=interval, y=steps,data=means, facets = weekday~., geom="line")
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-7-1.png) 
